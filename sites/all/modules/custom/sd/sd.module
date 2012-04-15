@@ -1,0 +1,66 @@
+<?php
+
+function nl_perm() {
+  return array('access gettwitterdata');
+}
+
+function sd_menu() {
+
+  $items['sd/pull/twitter'] = array( //api para stats
+    'title' => '',
+    'page callback' => 'sd_gettw',
+		'access callback' => TRUE,
+		'type' => MENU_CALLBACK,
+	);
+
+	return $items;
+} 
+
+function sd_gettw(){
+
+	//Recuerde: hay un limite de 120 llamadas por hora por ip
+	$feedjson = "https://api.twitter.com/1/statuses/user_timeline.json?include_entities=true&screen_name=malvinas30&count=200";
+	
+
+	$localjson = file_get_contents($feedjson);
+	$twjson = json_decode($localjson, true);
+
+	$timeline['headline'] = 'Malvinas 30';
+	$timeline['type'] = 'default';
+	$timeline['startDate'] = '1982';
+	$timeline['text'] = 'La historia de Malvinas';
+	$timeline['asset']['media'] = 'http://www.flickr.com/photos/cafeina/301765164/';
+	$timeline['asset']['credit'] = '';
+	$timeline['asset']['caption'] = '';
+
+	//parsear los datos
+	foreach ($twjson as $k => $d) {
+		$past_time = strtotime($d['created_at']);
+		$past_time_str = (date('Y',$past_time)-30).date(',n,j',$past_time);
+		
+		/* para debug
+		echo $d['text'].' : ';
+		echo $d['entities']['media'][0]['media_url'].' : ';
+		echo $d['created_at'].' : ';
+		echo $past_time_str.'';
+		echo '<br/>';
+		*/
+
+		$timeline['date'][$k]['startDate'] = $past_time_str;
+		$timeline['date'][$k]['endDate'] = '';
+		$timeline['date'][$k]['headline'] = ''; 
+		$timeline['date'][$k]['text'] = $d['text'];
+		$timeline['date'][$k]['asset']['media'] = $d['entities']['media'][0]['media_url'];
+		$timeline['date'][$k]['asset']['credit'] = '';
+		$timeline['date'][$k]['asset']['caption'] = '';
+	}
+
+	//crear el JSON para el timeline
+	$file = '/var/web/playground/static/timeline/timeline.json';
+	$t['timeline'] = $timeline;
+	file_put_contents($file, json_encode($t));
+
+	die('');
+
+	return true;
+}
